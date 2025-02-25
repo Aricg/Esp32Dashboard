@@ -26,11 +26,10 @@ def index():
 def receive_data():
     try:
         data = request.json
-        service_name = data.get('service_name')
         sensor_name = data.get('sensor_name')
         sensor_value = data.get('sensor_value')
 
-        if not all([service_name, sensor_name, sensor_value]):
+        if not all([sensor_name, sensor_value]):
             return jsonify({'error': 'Missing fields'}), 400
 
         # Store the sensor value
