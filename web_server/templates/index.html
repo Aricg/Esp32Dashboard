@@ -45,6 +45,11 @@
             // Plot the graph in its own div
             Plotly.newPlot(`graph-${index}`, graph.data, graph.layout);
         });
+
+        // Auto-refresh the page every 5 seconds
+        setTimeout(() => {
+            window.location.reload();
+        }, 5000);
     </script>
 </body>
 </html>
