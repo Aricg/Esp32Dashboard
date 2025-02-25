@@ -15,7 +15,15 @@ def index():
     graphs = []
     for sensor_name, values in sensor_data.items():
         graph = go.Scatter(x=list(range(len(values))), y=values, mode='lines+markers', name=sensor_name)
-        layout = go.Layout(title=f'Sensor: {sensor_name}', xaxis=dict(title='Time'), yaxis=dict(title='Value'))
+        layout = go.Layout(
+            title=f'Sensor: {sensor_name}',
+            xaxis=dict(title='Time', color='white'),
+            yaxis=dict(title='Value', color='white'),
+            paper_bgcolor='#1e1e1e',  # Background color of the graph
+            plot_bgcolor='#1e1e1e',   # Background color of the plotting area
+            font=dict(color='white'),  # Text color
+            margin=dict(l=50, r=50, t=80, b=50)
+        )
         graphs.append(dict(data=[graph], layout=layout))
     
     # Convert graphs to JSON for rendering in the template
