@@ -8,11 +8,18 @@
 </head>
 <body>
     <h1>Sensor Data Dashboard</h1>
-    <div id="graphs"></div>
+    <div id="graphs-container"></div>
     <script>
         const graphs = {{ graph_json | safe }};
-        graphs.forEach(graph => {
-            Plotly.newPlot('graphs', graph.data, graph.layout);
+        graphs.forEach((graph, index) => {
+            // Create a unique div for each graph
+            const graphDiv = document.createElement('div');
+            graphDiv.id = `graph-${index}`;
+            graphDiv.className = 'graph';
+            document.getElementById('graphs-container').appendChild(graphDiv);
+            
+            // Plot the graph in its own div
+            Plotly.newPlot(`graph-${index}`, graph.data, graph.layout);
         });
     </script>
 </body>
