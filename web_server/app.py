@@ -3,28 +3,43 @@ from collections import defaultdict
 import plotly
 import plotly.graph_objs as go
 import json
+import csv
+from datetime import datetime
+import os
 
 app = Flask(__name__)
 
+# Directory to store sensor data files
+DATA_DIR = 'sensor_data'
+
+# Maximum number of points to store per sensor (in-memory)
+MAX_POINTS = 1000
+
 # In-memory storage for sensor data
 sensor_data = defaultdict(list)
+
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
 
 @app.route('/', methods=['GET'])
 def index():
     # Generate graphs for all sensors
     graphs = []
     for sensor_name, values in sensor_data.items():
-        graph = go.Scatter(x=list(range(len(values))), y=values, mode='lines+markers', name=sensor_name)
-        layout = go.Layout(
-            title=f'Sensor: {sensor_name}',
-            xaxis=dict(title='Time', color='white'),
-            yaxis=dict(title='Value', color='white'),
-            paper_bgcolor='#1e1e1e',  # Background color of the graph
-            plot_bgcolor='#1e1e1e',   # Background color of the plotting area
-            font=dict(color='white'),  # Text color
-            margin=dict(l=50, r=50, t=80, b=50)
-        )
-        graphs.append(dict(data=[graph], layout=layout))
+        if values:
+            timestamps = [datetime.fromisoformat(v[0]) for v in values]
+            values_data = [v[1] for v in values]
+            graph = go.Scatter(x=timestamps, y=values_data, mode='lines+markers', name=sensor_name)
+            layout = go.Layout(
+                title=f'Sensor: {sensor_name} - Last {len(values)} Points',
+                xaxis=dict(title='Time', color='white'),
+                yaxis=dict(title='Value', color='white'),
+                paper_bgcolor='#1e1e1e',  # Background color of the graph
+                plot_bgcolor='#1e1e1e',   # Background color of the plotting area
+                font=dict(color='white'),  # Text color
+                margin=dict(l=50, r=50, t=80, b=50)
+            )
+            graphs.append(dict(data=[graph], layout=layout))
     
     # Convert graphs to JSON for rendering in the template
     graph_json = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
@@ -40,8 +55,21 @@ def receive_data():
         if not all([sensor_name, sensor_value]):
             return jsonify({'error': 'Missing fields'}), 400
 
-        # Store the sensor value
-        sensor_data[sensor_name].append(float(sensor_value))
+        # Add timestamp to the data
+        timestamp = datetime.now().isoformat()
+        sensor_data[sensor_name].append((timestamp, float(sensor_value)))
+
+        # Trim the list to keep only the last MAX_POINTS values
+        if len(sensor_data[sensor_name]) > MAX_POINTS:
+            sensor_data[sensor_name] = sensor_data[sensor_name][-MAX_POINTS:]
+
+        # Save data to a daily log file
+        today = datetime.now().strftime('%Y-%m-%d')
+        log_file = os.path.join(DATA_DIR, f'{sensor_name}_{today}.csv')
+        with open(log_file, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([timestamp, sensor_value])
+
         return jsonify({'status': 'success'}), 200
 
     except Exception as e:
