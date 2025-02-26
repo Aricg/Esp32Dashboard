@@ -164,6 +164,10 @@ def historical_data():
                 graph_data = dict(data=[graph], layout=layout)
                 graph_json = json.dumps(graph_data, cls=plotly.utils.PlotlyJSONEncoder)
     
+    # Ensure selected_sensor and selected_date are always defined
+    selected_sensor = selected_sensor if selected_sensor else ""
+    selected_date = selected_date if selected_date else ""
+    
     return render_template(
         "historical.html", 
         sensors=sensors, 
