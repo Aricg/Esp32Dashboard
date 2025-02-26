@@ -110,7 +110,10 @@ def historical_data():
     # If no sensor is selected but we have sensors, select the first one
     if not selected_sensor and sensors:
         selected_sensor = sensors[0]
-        # Get dates for this sensor
+        
+    # Get dates for the selected sensor
+    if selected_sensor:
+        dates = set()
         for filename in os.listdir(DATA_DIR):
             match = re.match(r'(.+)_(\d{4}-\d{2}-\d{2})\.csv', filename)
             if match and match.group(1) == selected_sensor:

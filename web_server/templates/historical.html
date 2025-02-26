@@ -71,7 +71,7 @@
                 <label for="sensor-select">Select Sensor:</label>
                 <select id="sensor-select" name="sensor">
                     {% for sensor in sensors %}
-                    <option value="{{ sensor }}">{{ sensor }}</option>
+                    <option value="{{ sensor }}" {% if sensor == selected_sensor %}selected{% endif %}>{{ sensor }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -79,7 +79,7 @@
                 <label for="date-select">Select Date:</label>
                 <select id="date-select" name="date">
                     {% for date in dates %}
-                    <option value="{{ date }}">{{ date }}</option>
+                    <option value="{{ date }}" {% if date == selected_date %}selected{% endif %}>{{ date }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -107,13 +107,51 @@
                 .then(data => {
                     const dateSelect = document.getElementById('date-select');
                     dateSelect.innerHTML = '';
-                    data.dates.forEach(date => {
+                    
+                    if (data.dates.length === 0) {
                         const option = document.createElement('option');
-                        option.value = date;
-                        option.textContent = date;
+                        option.value = '';
+                        option.textContent = 'No data available';
                         dateSelect.appendChild(option);
-                    });
+                    } else {
+                        data.dates.forEach(date => {
+                            const option = document.createElement('option');
+                            option.value = date;
+                            option.textContent = date;
+                            dateSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching dates:', error);
                 });
+        });
+        
+        // Set the initial selected values based on URL parameters
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sensor = urlParams.get('sensor');
+            const date = urlParams.get('date');
+            
+            if (sensor) {
+                const sensorSelect = document.getElementById('sensor-select');
+                for (let i = 0; i < sensorSelect.options.length; i++) {
+                    if (sensorSelect.options[i].value === sensor) {
+                        sensorSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            if (date) {
+                const dateSelect = document.getElementById('date-select');
+                for (let i = 0; i < dateSelect.options.length; i++) {
+                    if (dateSelect.options[i].value === date) {
+                        dateSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
         });
     </script>
 </body>
