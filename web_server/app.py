@@ -26,29 +26,8 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 @app.route("/", methods=["GET"])
 def index():
-    # Generate graphs for all sensors
-    graphs = []
-    for sensor_name, values in sensor_data.items():
-        if values:
-            timestamps = [datetime.fromisoformat(v[0]) for v in values]
-            values_data = [v[1] for v in values]
-            graph = go.Scatter(
-                x=timestamps, y=values_data, mode="lines+markers", name=sensor_name
-            )
-            layout = go.Layout(
-                title=f"Sensor: {sensor_name} - Last {len(values)} Points",
-                xaxis=dict(title="Time", color="white"),
-                yaxis=dict(title="Value", color="white"),
-                paper_bgcolor="#1e1e1e",  # Background color of the graph
-                plot_bgcolor="#1e1e1e",  # Background color of the plotting area
-                font=dict(color="white"),  # Text color
-                margin=dict(l=50, r=50, t=80, b=50),
-            )
-            graphs.append(dict(data=[graph], layout=layout))
-
-    # Convert graphs to JSON for rendering in the template
-    graph_json = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
-    return render_template("index.html", graph_json=graph_json)
+    # Redirect to historical data page
+    return historical_data()
 
 
 @app.route("/data", methods=["POST"])
@@ -83,6 +62,7 @@ def receive_data():
 
 
 @app.route("/historical-data", methods=["GET"])
+@app.route("/dashboard", methods=["GET"])  # Add an alternative route
 def historical_data():
     # Get list of all sensors from the data directory
     sensors = set()
@@ -153,7 +133,7 @@ def historical_data():
                     name=selected_sensor
                 )
                 layout = go.Layout(
-                    title=f"{selected_sensor} Data for {selected_date}",
+                    title=f"{selected_sensor} - {selected_date}",
                     xaxis=dict(title="Time", color="white"),
                     yaxis=dict(title="Value", color="white"),
                     paper_bgcolor="#1e1e1e",

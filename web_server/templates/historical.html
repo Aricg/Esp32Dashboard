@@ -63,8 +63,7 @@
 </head>
 <body>
     <div class="container">
-        <a href="{{ url_for('index') }}" class="back-link">← Back to Dashboard</a>
-        <h1>Historical Sensor Data</h1>
+        <h1>Sensor Data Dashboard</h1>
         
         <form id="date-form">
             <div class="form-group">
@@ -89,7 +88,7 @@
         {% if graph_json %}
         <div id="graph" class="graph"></div>
         {% else %}
-        <p>Select a sensor and date to view historical data.</p>
+        <p>Select a sensor and date to view data.</p>
         {% endif %}
     </div>
 
