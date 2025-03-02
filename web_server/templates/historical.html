@@ -98,6 +98,11 @@
         Plotly.newPlot('graph', graph.data, graph.layout);
         {% endif %}
         
+        // Auto-refresh the page every 30 seconds
+        setTimeout(() => {
+            window.location.reload();
+        }, 30000);
+        
         // Update available dates when sensor changes
         document.getElementById('sensor-select').addEventListener('change', function() {
             const sensor = this.value;
