@@ -75,12 +75,12 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="date-select">Select Date:</label>
-                <select id="date-select" name="date">
-                    {% for date in dates %}
-                    <option value="{{ date }}"{% if selected_date and date == selected_date %} selected="selected"{% endif %}>{{ date }}</option>
-                    {% endfor %}
-                </select>
+                <label for="start-date">Start Date:</label>
+                <input type="date" id="start-date" name="start_date" value="{{ start_date }}">
+            </div>
+            <div class="form-group">
+                <label for="end-date">End Date:</label>
+                <input type="date" id="end-date" name="end_date" value="{{ end_date }}">
             </div>
             <button type="submit">View Data</button>
         </form>
@@ -88,7 +88,7 @@
         {% if graph_json %}
         <div id="graph" class="graph"></div>
         {% else %}
-        <p>Select a sensor and date to view data.</p>
+        <p>Select a sensor and date range to view data.</p>
         {% endif %}
     </div>
 
@@ -103,39 +103,12 @@
             window.location.reload();
         }, 30000);
         
-        // Update available dates when sensor changes
-        document.getElementById('sensor-select').addEventListener('change', function() {
-            const sensor = this.value;
-            fetch(`/dates?sensor=${sensor}`)
-                .then(response => response.json())
-                .then(data => {
-                    const dateSelect = document.getElementById('date-select');
-                    dateSelect.innerHTML = '';
-                    
-                    if (data.dates.length === 0) {
-                        const option = document.createElement('option');
-                        option.value = '';
-                        option.textContent = 'No data available';
-                        dateSelect.appendChild(option);
-                    } else {
-                        data.dates.forEach(date => {
-                            const option = document.createElement('option');
-                            option.value = date;
-                            option.textContent = date;
-                            dateSelect.appendChild(option);
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching dates:', error);
-                });
-        });
-        
         // Set the initial selected values based on URL parameters
         document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
             const sensor = urlParams.get('sensor');
-            const date = urlParams.get('date');
+            const startDate = urlParams.get('start_date');
+            const endDate = urlParams.get('end_date');
             
             if (sensor) {
                 const sensorSelect = document.getElementById('sensor-select');
@@ -146,15 +119,13 @@
                     }
                 }
             }
-            
-            if (date) {
-                const dateSelect = document.getElementById('date-select');
-                for (let i = 0; i < dateSelect.options.length; i++) {
-                    if (dateSelect.options[i].value === date) {
-                        dateSelect.selectedIndex = i;
-                        break;
-                    }
-                }
+
+            if (startDate) {
+                document.getElementById('start-date').value = startDate;
+            }
+
+            if (endDate) {
+                document.getElementById('end-date').value = endDate;
             }
         });
     </script>

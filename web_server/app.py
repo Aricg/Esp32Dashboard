@@ -66,110 +66,108 @@ def receive_data():
 def historical_data():
     # Get list of all sensors from the data directory
     sensors = set()
-    dates = set()
-    
-    # Get the selected sensor and date from query parameters
-    selected_sensor = request.args.get('sensor')
-    selected_date = request.args.get('date')
-    
-    # Get all available sensors from file names
     for filename in os.listdir(DATA_DIR):
         if filename.endswith('.csv'):
-            # Extract sensor name from filename (format: sensor_name_YYYY-MM-DD.csv)
             match = re.match(r'(.+)_(\d{4}-\d{2}-\d{2})\.csv', filename)
             if match:
-                sensor_name, date = match.groups()
-                sensors.add(sensor_name)
-                if selected_sensor and sensor_name == selected_sensor:
-                    dates.add(date)
-    
-    # Convert sets to sorted lists
+                sensors.add(match.group(1))
     sensors = sorted(list(sensors))
-    dates = sorted(list(dates), reverse=True)
-    
-    # If no sensor is selected but we have sensors, select the first one
+
+    # Get the selected sensor and date range from query parameters
+    selected_sensor = request.args.get('sensor')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    # Default to the first sensor if none is selected
     if not selected_sensor and sensors:
         selected_sensor = sensors[0]
+
+    # Default dates if not provided (e.g., today)
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    if not start_date_str:
+        start_date_str = today_str
+    if not end_date_str:
+        end_date_str = today_str
         
-    # Get dates for the selected sensor
-    if selected_sensor:
-        dates = set()
-        for filename in os.listdir(DATA_DIR):
-            match = re.match(r'(.+)_(\d{4}-\d{2}-\d{2})\.csv', filename)
-            if match and match.group(1) == selected_sensor:
-                dates.add(match.group(2))
-        dates = sorted(list(dates), reverse=True)
-    
-    # If no date is selected but we have dates, select the first one
-    if not selected_date and dates:
-        selected_date = dates[0]
-    
-    # Generate graph if both sensor and date are selected
+    # Validate date strings
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+    except ValueError:
+        # Handle invalid date format, maybe render an error or default
+        start_date = datetime.now().date()
+        end_date = datetime.now().date()
+        start_date_str = start_date.strftime("%Y-%m-%d")
+        end_date_str = end_date.strftime("%Y-%m-%d")
+        # Optionally add a flash message or error indicator here
+
+    # Ensure start_date is not after end_date
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+        start_date_str, end_date_str = end_date_str, start_date_str
+
+    # Generate graph if a sensor is selected
     graph_json = None
-    if selected_sensor and selected_date:
-        file_path = os.path.join(DATA_DIR, f"{selected_sensor}_{selected_date}.csv")
-        if os.path.exists(file_path):
-            timestamps = []
-            values = []
-            
-            with open(file_path, 'r') as file:
-                reader = csv.reader(file)
-                for row in reader:
-                    if len(row) >= 2:
-                        try:
-                            # Parse timestamp and value
-                            timestamp = datetime.fromisoformat(row[0])
-                            value = float(row[1])
-                            timestamps.append(timestamp)
-                            values.append(value)
-                        except (ValueError, IndexError):
-                            continue
-            
-            if timestamps and values:
-                graph = go.Scatter(
-                    x=timestamps, 
-                    y=values, 
-                    mode="lines+markers", 
-                    name=selected_sensor
-                )
-                layout = go.Layout(
-                    title=f"{selected_sensor} - {selected_date}",
-                    xaxis=dict(title="Time", color="white"),
-                    yaxis=dict(title="Value", color="white"),
-                    paper_bgcolor="#1e1e1e",
-                    plot_bgcolor="#1e1e1e",
-                    font=dict(color="white"),
-                    margin=dict(l=50, r=50, t=80, b=50),
-                )
-                graph_data = dict(data=[graph], layout=layout)
-                graph_json = json.dumps(graph_data, cls=plotly.utils.PlotlyJSONEncoder)
-    
-    # Ensure selected_sensor and selected_date are always defined
-    selected_sensor = selected_sensor if selected_sensor else ""
-    selected_date = selected_date if selected_date else ""
-    
+    if selected_sensor:
+        all_timestamps = []
+        all_values = []
+        
+        # Iterate through files and collect data within the date range
+        for filename in os.listdir(DATA_DIR):
+            match = re.match(rf'{re.escape(selected_sensor)}_(\d{{4}}-\d{{2}}-\d{{2}})\.csv', filename)
+            if match:
+                file_date_str = match.group(1)
+                try:
+                    file_date = datetime.strptime(file_date_str, "%Y-%m-%d").date()
+                    if start_date <= file_date <= end_date:
+                        file_path = os.path.join(DATA_DIR, filename)
+                        with open(file_path, 'r') as file:
+                            reader = csv.reader(file)
+                            for row in reader:
+                                if len(row) >= 2:
+                                    try:
+                                        timestamp = datetime.fromisoformat(row[0])
+                                        value = float(row[1])
+                                        all_timestamps.append(timestamp)
+                                        all_values.append(value)
+                                    except (ValueError, IndexError):
+                                        continue # Skip malformed rows
+                except ValueError:
+                    continue # Skip files with invalid date format in name
+
+        # Sort data by timestamp if data was found
+        if all_timestamps:
+            sorted_data = sorted(zip(all_timestamps, all_values))
+            all_timestamps, all_values = zip(*sorted_data)
+
+            graph = go.Scatter(
+                x=list(all_timestamps), 
+                y=list(all_values), 
+                mode="lines+markers", 
+                name=selected_sensor
+            )
+            layout = go.Layout(
+                title=f"{selected_sensor} ({start_date_str} to {end_date_str})",
+                xaxis=dict(title="Time", color="white"),
+                yaxis=dict(title="Value", color="white"),
+                paper_bgcolor="#1e1e1e",
+                plot_bgcolor="#1e1e1e",
+                font=dict(color="white"),
+                margin=dict(l=50, r=50, t=80, b=50),
+            )
+            graph_data = dict(data=[graph], layout=layout)
+            graph_json = json.dumps(graph_data, cls=plotly.utils.PlotlyJSONEncoder)
+
     return render_template(
         "historical.html", 
         sensors=sensors, 
-        dates=dates, 
         graph_json=graph_json,
-        selected_sensor=selected_sensor,
-        selected_date=selected_date
+        selected_sensor=selected_sensor if selected_sensor else "",
+        start_date=start_date_str,
+        end_date=end_date_str
     )
 
-@app.route("/dates", methods=["GET"])
-def get_dates():
-    """API endpoint to get available dates for a specific sensor"""
-    sensor = request.args.get('sensor')
-    dates = []
-    
-    if sensor:
-        for filename in os.listdir(DATA_DIR):
-            match = re.match(r'(.+)_(\d{4}-\d{2}-\d{2})\.csv', filename)
-            if match and match.group(1) == sensor:
-                dates.append(match.group(2))
-    
-    return jsonify({"dates": sorted(dates, reverse=True)})
+# Removed the get_dates function and its route
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
